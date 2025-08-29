@@ -1,5 +1,36 @@
 # Changelog
 
+## [15.0.1] - 2025-08-29
+
+### Fixed
+- Corrected `.env` loading to ensure proper environment variable handling.
+- Fixed a bug in the JSONL tracer to ensure accurate trace output.
+- Resolved a missing import for Neo4j integration.
+
+### Changed
+- Enabled dual output for JSONL traces and Neo4j working memory for enhanced observability.
+
+### Added
+- Completed API reference documentation.
+- Added a comprehensive prompt engineering guide.
+- Included Neo4j query examples for advanced analysis.
+- Added a tutorial for new users.
+
+## [15.0.0] - 2025-08-29
+
+### Added
+- **Core Algorithm**: Introduced a three-stage interpretation pipeline (Combinatorial, Semantic Resolution, Ontological Lensing).
+- **CLI**: Added a new `compute-cell` command with flags for verbosity, tracing, and Neo4j export.
+
+### Changed
+- **Major Architectural Refactoring**: This is a complete rewrite with a new CLI, simplified types, and different import paths. The project is transformed from a flexible framework into a fixed "semantic calculator" algorithm.
+
+### BREAKING CHANGES
+- This release is a complete architectural rewrite and is not backward-compatible.
+- The CLI has been completely changed, with `compute-cell` as the new primary command.
+- All import paths have been updated due to the new structure.
+
+
 All notable changes to the Chirality Framework will be documented in this file.  References "CF14" 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
