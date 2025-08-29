@@ -154,9 +154,9 @@ Station: Problem statement
 Column names: [‘Guiding’, ‘Applying’, ‘Judging’, ‘Reviewing’]
 Row names: [‘Normative’, ‘Operative’, ‘Evaluative’]
 Elements: [
-[‘Direction‘, ‘Implementation’, ‘Evaluation’, ‘Assessment’]
-[‘Leadership’, ‘Execution’, ‘Decision-making’, ‘Quality Control’]
-[‘Standards’, ‘Performance’, ‘Feedback’, ‘Refinement’]
+[‘Values‘, ‘Actions’, ‘Benchmarks’, ‘Feedback’]
+[‘Standards’, ‘Methods’, ‘Judgment’, ‘Adaptation’]
+[‘Objectives’, ‘Coordination’, ‘Evaluation’, ‘Refinement’]
 ]
 
 ## Matrix B
@@ -166,10 +166,10 @@ Station: N/A this is the Decisions matrix
 Column names: [‘Necessity (vs Contingency)’, ‘Sufficiency’, ‘Completeness’, ‘Consistency’]
 Row names: [‘Data’, ‘Information’, Knowledge’, ‘Wisdom’]
 Elements: [
-[‘Essential Facts’, ‘Adequate Inputs’, ‘Comprehensive Records’, ‘Reliable Records’]
-[‘Critical Context’, ‘Sufficient Detail’, ‘Holistic View’, ‘Congruent Patterns’ ]
-[ ‘Fundamental Understanding’, ‘Adequate Insight’, ‘Full Comprehension’, ‘Coherent Framework’ ]
-[‘Vital Judgment’, ‘Sound Reasoning’ , ‘Thorough Prudence’, ‘Harmonious Principles’ ]
+[‘Necessary vs Contingent’, ‘Sufficient’, ‘Complete’, ‘Consistent’]
+[‘Relevant’, ‘Actionable’, ‘Contextual’, ‘Congruent’ ]
+[ ‘Fundamental’, ‘Effective’, ‘Systematic’, ‘Coherent’ ]
+[‘Essential’, ‘Optimal’ , ‘Holistic’, ‘Principled’ ]
 ]
 
 ## Matrix C 

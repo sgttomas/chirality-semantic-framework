@@ -24,8 +24,6 @@ def q(s: str) -> str:
     # Use json.dumps then strip outer quotes for robust escaping
     return json.dumps(s, ensure_ascii=False)[1:-1]
 
-def _ensure_valley_summary(valley_summary: str) -> str:
-    return valley_summary.strip() or "Semantic Valley: Problem Statement → Requirements → Objectives → Solution Objectives"
 
 # Canonical system prompt — used for all semantic operations
 SYSTEM_PROMPT = """\
@@ -33,27 +31,70 @@ You are the semantic engine for the Chirality Framework (Phase-1 canonical build
 
 The Chirality Framework is a meta-operating system for meaning. It frames knowledge work as wayfinding through an unknown semantic valley:
 - The valley is the conceptual space for this domain.
-- Stations are landmarks (each has a distinct role in meaning transformation).
-- Rows and columns are fixed ontological axes; preserve them at all times.
-- A cell is a coordinate: (row_label × col_label) at a given station.
+- It is used to create a structured set of semantic relationships that have coherent meaning across the problem solving process.
+- These structured relationships can be used as “semantic anchors” to guide an LLM across stages of solving a problem.
+- This is called traversing a “semantic valley” because it maps the most probable path from problem to solution,
+while other paths are made to be like steep valley walls that limit excursions
 
 Mission:
-- Operate ONLY within the provided valley + station context.
-- Apply exactly ONE semantic operation per call: multiplication (×), addition (+), or interpretation (separate lens).
-- Preserve the identity of source terms; integrate them, do not overwrite them.
-- Resolve ambiguity inside the operation; do not delete it.
-- Keep every output traceable to its sources.
+- Clearly show how the elements transform according to the instructions.
+- There is a time to combine together statements precisely according to a strict procedure, and a time to interpret those statements within a given context.
+- Those times will be clearly identified by the user’s prompts. 
+
+Semantic Operations:
+
+Semantic Multiplication “ * “ 
+
+Semantic multiplication (denoted by * ) means the semantics of the terms are resolved by combining the meaning of words into a coherent word or statement that represents the semantic intersection of those words (the meaning when combined together, not just adjoining the terms). This can even be done when the concept is a highly abstract word pairing because you are an LLM.
+
+Examples:
+"sufficient" * "reason" = "justification"
+“analysis” * “judgment” = “informed decision”
+"precision" * "durability" = "reliability"
+"probability" * "consequence" = "risk"
+
+Semantic Addition “ + “ 
+
+Semantic addition (denoted by + ) means simply concatenating words or sentence fragments together to form a longer statement. 
+Example:
+"faisal" + "has" + "seven" + "balloons" = faisal has seven balloons
+
+Order of Operations:
+
+First is ‘semantic multiplication’, second is ‘semantic addition’.
+
+Hierarchical Semantic Embedding:
+
+- Your internal architecture organizes meaning hierarchically across nested conceptual layers.
+- The Chirality Framework maps layers of meaning.
+
+
+Complete 11-Station Semantic Valley:
+
+- You will only ever be operating within a single station along the semantic valley, but awareness of the entire valley is important context.
+- Station Map (Reference)
+
+1. [A], [B] -> Problem Statement
+2. [A] * [B] = [C] -> Problem Requirements
+3. [A] + [F] = [D] -> Solution Objectives
+4. [K] * [J] = [X] -> Verification
+5. [X] ->  [Z] -> Validation
+6. [G] * [T] = [E]  -> Evaluation
+7. [R] x [E] = [M] -> Assessment
+8. [M] x [X] = [W] -> Implementation
+9. [W] x [P] = [U] -> Reflection
+10. [U] x [H] = [N] -> Resolution
 
 Voice & style (vibe):
-- Confident, concrete, humane; no fluff or marketing language.
 - Prefer strong verbs and specific nouns over abstractions.
 - Avoid hedging ("might", "could") unless uncertainty is essential and then state it plainly.
-- Length: × and + = 1–2 sentences. Interpretation ≤ 2 sentences, stakeholder-friendly, ontology-preserving.
+- Length should be minimized by utilizing the most compact expression that preserved the full meaning, even if the words are esoteric.
 
 Output contract (STRICT):
+- Operate ONLY within the provided ontology (row & column identify) + semantic valley station context.
+- Use ONLY semantic operations to determine the meaning of combined terms, finding the most probable result of combined embeddings vectors in your latent space.
 - Return ONLY a single JSON object with keys: "text", "terms_used", "warnings".
 - "terms_used" must echo the exact provided source strings (after normalization) that you actually integrated.
-- If any required input is missing/empty, include a warning like "missing_input:<name>".
 - Do NOT include code fences, prose, or any text outside the JSON object.
 """
 
@@ -79,110 +120,9 @@ def generate_valley_summary(valley: dict | None, station: dict | None) -> str:
         names[cur] = f"[{names[cur]}]"
     return f"Semantic Valley: {' → '.join(names)}"
 
-# === User-prompt templates ===
+# === Static templates removed ===
+# All prompt composition now happens dynamically in CellResolver.assemble_prompt()
+# This follows the fragment composition architecture where prompts are built
+# from configurable fragments rather than fixed templates.
 
-def prompt_multiply(valley_summary, station, row_label, col_label, term_a, term_b):
-    valley_summary = _ensure_valley_summary(valley_summary)
-    return f"""\
-Role: expert in conceptual synthesis within station "{q(station)}" of the semantic valley.
-
-Valley map:
-{valley_summary}
-
-Position:
-- Row axis: "{q(row_label)}"
-- Column axis: "{q(col_label)}"
-
-Task (semantic multiplication, ×):
-Fuse these meanings at their intersection. Preserve both identities; remain within the station's scope.
-- "{q(term_a)}"
-- "{q(term_b)}"
-
-Output JSON ONLY (no extra text). "terms_used" must include EXACT normalized echoes of both inputs:
-{{"text": "", "terms_used": ["{q(term_a)}","{q(term_b)}"], "warnings": []}}
-"""
-
-def prompt_add(valley_summary, station, row_label, col_label, products: list[str]):
-    valley_summary = _ensure_valley_summary(valley_summary)
-    product_lines = "\n".join(f'- "{q(p)}"' for p in (products or []))
-    return f"""\
-Role: expert integrator within station "{q(station)}" of the semantic valley.
-
-Valley map:
-{valley_summary}
-
-Position:
-- Row axis: "{q(row_label)}"
-- Column axis: "{q(col_label)}"
-
-Task (semantic addition, +):
-Integrate the following product sentences into one coherent statement WITHOUT flattening distinctions:
-{product_lines if product_lines else "- (no products provided)"}
-
-Output JSON ONLY (no extra text). If products are empty, add "warnings": ["missing_input:products"]:
-{{"text": "", "terms_used": [], "warnings": []}}
-"""
-
-def prompt_interpret(valley_summary, station, row_label, col_label, summed_text):
-    valley_summary = _ensure_valley_summary(valley_summary)
-    return f"""\
-Role: explanatory interpreter for stakeholders unfamiliar with the framework.
-
-Valley map:
-{valley_summary}
-
-Position:
-- Row axis: "{q(row_label)}"
-- Column axis: "{q(col_label)}"
-
-Input:
-"{q(summed_text)}"
-
-Task (interpretation):
-Re-express in clear language for stakeholders, preserving ontology and anchors.
-
-Output JSON ONLY (no extra text):
-{{"text": "", "terms_used": [], "warnings": []}}
-"""
-
-def prompt_elementwise_F(valley_summary, row_label, col_label, j_term, c_term):
-    valley_summary = _ensure_valley_summary(valley_summary)
-    return f"""\
-Role: expert in conceptual synthesis within station "Objectives" of the semantic valley.
-
-Valley map:
-{valley_summary}
-
-Position (SAME coordinate across inputs):
-- Row axis: "{q(row_label)}"
-- Column axis: "{q(col_label)}"
-
-Task (element-wise multiplication for Objectives, ⊙):
-Intersect the Objective frame and the Requirement for the SAME coordinate (i,j). Preserve both identities.
-- J(i,j): "{q(j_term)}"
-- C(i,j): "{q(c_term)}"
-
-Output JSON ONLY (no extra text). "terms_used" must include EXACT normalized echoes of both inputs:
-{{"text": "", "terms_used": ["{q(j_term)}","{q(c_term)}"], "warnings": []}}
-"""
-
-def prompt_add_D(valley_summary, row_label, col_label, a_val, f_val):
-    valley_summary = _ensure_valley_summary(valley_summary)
-    composed = f'{q(a_val)} applied to frame the problem; {q(f_val)} to resolve the problem.'
-    return f"""\
-Role: narrative synthesizer within station "Solution Objectives".
-
-Valley map:
-{valley_summary}
-
-Position:
-- Row axis: "{q(row_label)}"
-- Column axis: "{q(col_label)}"
-
-Task (semantic addition, +):
-Compose a single sentence in the pattern:
-"{q(a_val)} applied to frame the problem; {q(f_val)} to resolve the problem."
-
-Output JSON ONLY (no extra text). "terms_used" must echo A and F exactly:
-{{"text": "{composed}", "terms_used": ["{q(a_val)}","{q(f_val)}"], "warnings": []}}
-"""
+# The q() function and valley utilities remain available for fragment composition

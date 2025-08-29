@@ -1,23 +1,36 @@
 """
-Core CF14 framework modules.
+Core CF14 semantic calculator modules.
 """
 
-from .types import Cell, Matrix, Tensor, Station, Operation
-from .ops import EchoResolver, OpenAIResolver, op_multiply, op_interpret, op_elementwise, op_add, op_cross
-from .serialize import load_matrix, save_matrix
+from .types import Cell, Matrix, Operation
+from .context import SemanticContext
+from .cell_resolver import CellResolver
+from .resolvers import EchoResolver
+from .operations import (
+    compute_cell_C,
+    compute_cell_F,
+    synthesize_cell_D,
+    compute_matrix_C,
+    compute_matrix_F,
+    synthesize_matrix_D
+)
+from .matrices import MATRIX_A, MATRIX_B, MATRIX_J
 from .validate import CF14ValidationError
-from .ids import generate_cell_id, generate_matrix_id, generate_operation_id
+from .tracer import JSONLTracer
 
 __all__ = [
     # Core types
-    "Cell", "Matrix", "Tensor", "Station", "Operation",
-    # Operations
-    "EchoResolver", "OpenAIResolver", 
-    "op_multiply", "op_interpret", "op_elementwise", "op_add", "op_cross",
-    # Serialization
-    "load_matrix", "save_matrix",
+    "Cell", "Matrix", "Operation", "SemanticContext",
+    # Resolvers
+    "CellResolver", "EchoResolver",
+    # Operations (cell-level)
+    "compute_cell_C", "compute_cell_F", "synthesize_cell_D",
+    # Operations (matrix-level)
+    "compute_matrix_C", "compute_matrix_F", "synthesize_matrix_D",
+    # Canonical matrices
+    "MATRIX_A", "MATRIX_B", "MATRIX_J",
     # Validation
     "CF14ValidationError",
-    # ID generation
-    "generate_cell_id", "generate_matrix_id", "generate_operation_id",
+    # Tracing
+    "JSONLTracer",
 ]

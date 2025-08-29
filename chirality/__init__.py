@@ -1,50 +1,54 @@
 """
-Chirality Semantic Framework - Clean implementation of CF14 protocol.
+Chirality Framework - CF14 Semantic Calculator.
 
-A minimal, deterministic implementation focused on core semantic operations.
+A fixed, canonical "semantic calculator" for structured problem-solving.
+Not a framework but a precise algorithm with a 3-stage interpretation pipeline.
 """
 
-__version__ = "14.3.1"
+__version__ = "14.4.0"
 __author__ = "Chirality Framework Team"
 
-from .core.types import Cell, Matrix, Tensor, Station, Operation
-from .core.ids import generate_cell_id, generate_matrix_id, generate_thread_id
-from .core.validate import validate_matrix, validate_cell
-from .core.ops import (
-    Resolver, OpenAIResolver, EchoResolver,
-    op_multiply, op_add, op_interpret, op_elementwise, op_cross
+from .core.types import Cell, Matrix, Operation
+from .core.context import SemanticContext
+from .core.cell_resolver import CellResolver
+from .core.resolvers import EchoResolver
+from .core.operations import (
+    compute_cell_C,
+    compute_cell_F,
+    synthesize_cell_D,
+    compute_matrix_C,
+    compute_matrix_F,
+    synthesize_matrix_D
 )
-from .core.stations import S1Runner, S2Runner, S3Runner
-from .core.serialize import load_matrix, save_matrix
+from .core.matrices import MATRIX_A, MATRIX_B, MATRIX_J
+from .core.validate import CF14ValidationError, validate_matrix, validate_cell
+from .core.tracer import JSONLTracer
 
 __all__ = [
-    # Types
+    # Core types
     "Cell",
     "Matrix", 
-    "Tensor",
-    "Station",
     "Operation",
-    # ID Generation
-    "generate_cell_id",
-    "generate_matrix_id",
-    "generate_thread_id",
+    "SemanticContext",
+    # Canonical matrices
+    "MATRIX_A",
+    "MATRIX_B",
+    "MATRIX_J",
+    # Resolvers
+    "CellResolver",
+    "EchoResolver",
+    # Cell-level operations (the core algorithm)
+    "compute_cell_C",
+    "compute_cell_F",
+    "synthesize_cell_D",
+    # Matrix-level operations (convenience wrappers)
+    "compute_matrix_C",
+    "compute_matrix_F",
+    "synthesize_matrix_D",
     # Validation
+    "CF14ValidationError",
     "validate_matrix",
     "validate_cell",
-    # Serialization
-    "load_matrix",
-    "save_matrix",
-    # Operations
-    "Resolver",
-    "OpenAIResolver",
-    "EchoResolver",
-    "op_multiply",
-    "op_add", 
-    "op_interpret",
-    "op_elementwise",
-    "op_cross",
-    # Stations
-    "S1Runner",
-    "S2Runner",
-    "S3Runner",
+    # Tracing
+    "JSONLTracer",
 ]

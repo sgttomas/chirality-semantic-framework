@@ -1,8 +1,10 @@
 """
-Cell-by-cell semantic resolver for precise CF14 operations.
+Consolidated OpenAI interface for CF14 semantic operations.
 
-Implements semantic multiplication, addition, and interpretation
-on individual matrix cells using structured prompts and JSON responses.
+This is the ONLY file in the codebase that imports OpenAI.
+All semantic operations (multiplication, addition, interpretation) 
+go through this centralized resolver with robust error handling,
+retry logic, and JSON validation.
 """
 
 import os
@@ -11,7 +13,7 @@ import time
 import hashlib
 import unicodedata
 import re
-from typing import Dict, Any, List, Optional, Literal
+from typing import Dict, Any, List, Optional, Literal, Tuple
 from datetime import datetime
 
 try:
@@ -20,6 +22,8 @@ except Exception:
     OpenAI = None  # Defer hard failure until actually instantiated
 
 from .types import Cell, Matrix
+from .context import SemanticContext
+from .prompts import SYSTEM_PROMPT
 
 
 def normalize_text(s: str) -> str:
@@ -37,9 +41,18 @@ def escape_for_prompt(s: str) -> str:
 
 
 class CellResolver:
-    """Handles semantic operations on individual matrix cells."""
+    """
+    Consolidated OpenAI interface for all CF14 semantic operations.
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o"):
+    This is the centralized resolver that handles all LLM calls with:
+    - Robust retry logic with exponential backoff
+    - JSON validation and error handling  
+    - Temperature control per operation type
+    - Deterministic prompt hashing
+    - Comprehensive error recovery
+    """
+    
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o", seed: int = 42):
         if OpenAI is None:
             raise ImportError("OpenAI package required. Install with: pip install openai")
 
@@ -49,214 +62,237 @@ class CellResolver:
         
         self.client = OpenAI(api_key=api_key)
         self.model = model
+        self.seed = seed
         
-        # Temperature settings for different operations
+        # Temperature settings for different operations (consolidated from ops.py)
         self.temperatures = {
-            "multiply": 0.7,  # Creative intersection
-            "add": 0.5,       # Tighter integration
-            "interpret": 0.5  # Clear explanation
+            "multiply": 0.7,  # Creative intersection for semantic multiplication
+            "add": 0.5,       # Tighter integration for semantic addition
+            "interpret": 0.5, # Clear explanation for interpretation
+            "*": 0.7,         # Alias for multiply
+            "+": 0.5,         # Alias for add
+            "⊙": 0.7          # Element-wise multiplication
         }
+        
+        # Retry configuration (from OpenAIResolver)
+        self.max_retries = 3
+        self.base_delay = 0.4
+        
+        # Default system frame for fragment composition (from prompts.py)
+        self.default_system_frame = SYSTEM_PROMPT
     
-    def _get_system_prompt(self) -> str:
-        """Get the standard CF14 system prompt."""
-        return """You are the semantic engine for the Chirality Framework (Phase-1 canonical build).
-
-The Chirality Framework is a meta-operating system for meaning. It frames knowledge work as wayfinding through an unknown semantic valley:
-- The valley is the conceptual space for this domain.
-- Stations are landmarks (each has a distinct role in meaning transformation).
-- Rows and columns are fixed ontological axes; preserve them at all times.
-- A cell is a coordinate: (row_label × col_label) at a given station.
-
-Mission:
-- Operate ONLY within the provided valley + station context.
-- Apply exactly ONE semantic operation per call: multiplication (×), addition (+), or interpretation (separate lens).
-- Preserve the identity of source terms; integrate them, do not overwrite them.
-- Resolve ambiguity inside the operation; do not delete it.
-- Keep every output traceable to its sources.
-
-Voice & style (vibe):
-- Confident, concrete, humane; no fluff or marketing language.
-- Prefer strong verbs and specific nouns over abstractions.
-- Avoid hedging ("might", "could") unless uncertainty is essential and then state it plainly.
-- Length: × and + = 1–2 sentences. Interpretation ≤ 2 sentences, stakeholder-friendly, ontology-preserving.
-
-Output contract (STRICT):
-- Return ONLY a single JSON object with keys: "text", "terms_used", "warnings".
-- "terms_used" must echo the exact provided source strings (after normalization) that you actually integrated.
-- If any required input is missing/empty, include a warning like "missing_input:<name>".
-- Do NOT include code fences, prose, or any text outside the JSON object."""
-
-    def _generate_valley_summary(self, station: str) -> str:
-        """Generate valley summary with current station highlighted."""
-        stations = ["Problem Statement", "Requirements", "Objectives", "Solution Objectives"]
-        
-        # Find and bracket current station
-        for i, s in enumerate(stations):
-            if station.lower() in s.lower() or s.lower() in station.lower():
-                stations[i] = f"[{s}]"
-                break
-        
-        return f"Semantic Valley: {' → '.join(stations)}"
-
-    def multiply_terms(self, term_a: str, term_b: str, station: str, 
-                      row_label: str = "", col_label: str = "") -> Dict[str, Any]:
+    def assemble_prompt(self, valley_summary: str, station: str, row_label: str, col_label: str, 
+                       operation_type: str, terms: Dict, operation_instructions: str = None) -> str:
         """
-        Perform semantic multiplication on two terms.
+        Fragment composition - you control each piece.
         
-        Args:
-            term_a: First term to multiply
-            term_b: Second term to multiply  
-            station: Current semantic valley station
-            row_label: Row ontology label for context
-            col_label: Column ontology label for context
-            
+        Dynamically assembles prompts from configurable fragments rather than static templates.
+        This is the core of the fragment composition architecture.
+        """
+        fragments = []
+
+        if valley_summary:
+            fragments.append(f"Valley Context: {valley_summary}")
+
+        fragments.append(f"Station: {station}")
+        fragments.append(f"Coordinates: ({row_label}, {col_label})")
+
+        if operation_instructions:
+            fragments.append(f"Operation: {operation_instructions}")
+        else:
+            # Default operation instructions based on type
+            if operation_type == "*":
+                fragments.append("Operation: Semantic multiplication - fuse meanings at their intersection")
+            elif operation_type == "interpret":
+                fragments.append("Operation: Ontological lensing - interpret through row/column context")
+            elif operation_type == "synthesize":
+                fragments.append("Operation: Synthesis - apply canonical D formula")
+
+        fragments.append(f"Terms: {terms}")
+
+        return "\n\n".join(fragments)
+
+    def resolve_semantic_pair(self, pair: str, context: SemanticContext) -> str:
+        """
+        Stage 2: Use fragment composition for semantic multiplication.
+        
+        Takes a word pair like 'Values * Necessary' and resolves it to a concept
+        like 'Essential Values' using the full SemanticContext for guidance.
+        """
+        system_prompt = context.system_frame or self.default_system_frame
+
+        user_prompt = self.assemble_prompt(
+            valley_summary=context.valley_summary,
+            station=context.station_context,
+            row_label=context.row_label,
+            col_label=context.col_label,
+            operation_type="*",
+            terms={"term_a": pair.split(" * ")[0], "term_b": pair.split(" * ")[1]},
+            operation_instructions=context.operation_instructions
+        )
+
+        response, metadata = self._call_openai(system_prompt, user_prompt, "multiply")
+        return response.get("text", "")
+
+    def apply_ontological_lens(self, content: str, context: SemanticContext) -> str:
+        """
+        Stage 3: Fragment-based ontological lensing.
+        
+        Interprets content through the ontological lenses of the row/column coordinates.
+        This is where deep, context-specific insights are generated.
+        """
+        system_prompt = context.system_frame or self.default_system_frame
+
+        user_prompt = self.assemble_prompt(
+            valley_summary=context.valley_summary,
+            station=context.station_context,
+            row_label=context.row_label,
+            col_label=context.col_label,
+            operation_type="interpret",
+            terms={"content": content},
+            operation_instructions=context.operation_instructions
+        )
+
+        response, metadata = self._call_openai(system_prompt, user_prompt, "interpret")
+        return response.get("text", "")
+    
+# _get_system_prompt() method removed - now using imported SYSTEM_PROMPT from prompts.py
+
+# Old methods removed - replaced by fragment composition architecture
+
+# Old add_terms() and interpret_term() methods removed - replaced by fragment composition
+
+    def _call_openai(self, system_prompt: str, user_prompt: str, operation: str = "semantic") -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """
+        Consolidated OpenAI call with robust error handling.
+        
+        Combines the best patterns from ops.py OpenAIResolver:
+        - Exponential backoff retry logic
+        - JSON extraction and validation
+        - Prompt hashing for audit trails
+        - Comprehensive error recovery
+        
         Returns:
-            Dict with keys: text, terms_used, warnings
+            Tuple of (parsed_response, metadata)
         """
-        valley_summary = self._generate_valley_summary(station)
-        
-        user_prompt = f"""Role: expert in conceptual synthesis within station "{escape_for_prompt(station)}" of the semantic valley.
-
-Valley map:
-{valley_summary}
-
-Position:
-- Row axis: "{escape_for_prompt(row_label)}"
-- Column axis: "{escape_for_prompt(col_label)}"
-
-Task (semantic multiplication, ×):
-Fuse these meanings at their intersection. Preserve both identities; remain within the station's scope.
-- "{escape_for_prompt(term_a)}"
-- "{escape_for_prompt(term_b)}"
-
-Output JSON ONLY (no extra text). "terms_used" must include EXACT normalized echoes of both inputs:
-{{"text": "", "terms_used": ["{escape_for_prompt(term_a)}","{escape_for_prompt(term_b)}"], "warnings": []}}"""
-
-        return self._call_openai("multiply", user_prompt)
-
-    def add_terms(self, products: List[str], station: str,
-                  row_label: str = "", col_label: str = "") -> Dict[str, Any]:
-        """
-        Perform semantic addition on multiple product terms.
-        
-        Args:
-            products: List of product terms to add
-            station: Current semantic valley station  
-            row_label: Row ontology label for context
-            col_label: Column ontology label for context
-            
-        Returns:
-            Dict with keys: text, terms_used, warnings
-        """
-        valley_summary = self._generate_valley_summary(station)
-        
-        product_lines = "\n".join(f'- "{escape_for_prompt(p)}"' for p in (products or []))
-        
-        user_prompt = f"""Role: expert integrator within station "{escape_for_prompt(station)}" of the semantic valley.
-
-Valley map:
-{valley_summary}
-
-Position:
-- Row axis: "{escape_for_prompt(row_label)}"
-- Column axis: "{escape_for_prompt(col_label)}"
-
-Task (semantic addition, +):
-Integrate the following product sentences into one coherent statement WITHOUT flattening distinctions:
-{product_lines if product_lines else "- (no products provided)"}
-
-Output JSON ONLY (no extra text). If products are empty, add "warnings": ["missing_input:products"]:
-{{"text": "", "terms_used": [], "warnings": []}}"""
-
-        return self._call_openai("add", user_prompt)
-
-    def interpret_term(self, summed_text: str, station: str,
-                      row_label: str = "", col_label: str = "") -> Dict[str, Any]:
-        """
-        Interpret a term for stakeholder clarity.
-        
-        Args:
-            summed_text: Text to interpret
-            station: Current semantic valley station
-            row_label: Row ontology label for context  
-            col_label: Column ontology label for context
-            
-        Returns:
-            Dict with keys: text, terms_used, warnings
-        """
-        valley_summary = self._generate_valley_summary(station)
-        
-        user_prompt = f"""Role: explanatory interpreter for stakeholders unfamiliar with the framework.
-
-Valley map:
-{valley_summary}
-
-Position:
-- Row axis: "{escape_for_prompt(row_label)}"
-- Column axis: "{escape_for_prompt(col_label)}"
-
-Input:
-"{escape_for_prompt(summed_text)}"
-
-Task (interpretation):
-Re-express in clear language for stakeholders, preserving ontology and anchors.
-
-Output JSON ONLY (no extra text):
-{{"text": "", "terms_used": [], "warnings": []}}"""
-
-        return self._call_openai("interpret", user_prompt)
-
-    def _call_openai(self, operation: str, user_prompt: str, max_retries: int = 3) -> Dict[str, Any]:
-        """Make OpenAI API call with retry logic."""
-        system_prompt = self._get_system_prompt()
         temperature = self.temperatures.get(operation, 0.5)
+        prompt_hash_val = self._prompt_hash(system_prompt, user_prompt)
         
-        for attempt in range(max_retries):
+        attempt = 0
+        last_err: Optional[Exception] = None
+        t0 = time.time()
+
+        while attempt <= self.max_retries:
             try:
-                response = self.client.chat.completions.create(
+                resp = self.client.chat.completions.create(
                     model=self.model,
                     temperature=temperature,
+                    top_p=0,
+                    seed=self.seed,
                     max_tokens=200,
                     messages=[
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ]
+                        {"role": "user", "content": user_prompt},
+                    ],
                 )
                 
-                content = response.choices[0].message.content
-                if not content:
-                    raise ValueError("Empty response from OpenAI")
+                # Extract and validate JSON content
+                raw = resp.choices[0].message.content or ""
+                js = self._extract_json(raw)
+                obj = json.loads(js)
+                self._validate_obj(obj)
                 
-                # Parse JSON response
-                try:
-                    result = json.loads(content.strip())
-                    
-                    # Validate required keys
-                    if not isinstance(result, dict):
-                        raise ValueError("Response is not a JSON object")
-                    
-                    required_keys = ["text", "terms_used", "warnings"]
-                    for key in required_keys:
-                        if key not in result:
-                            result[key] = [] if key in ["terms_used", "warnings"] else ""
-                    
-                    return result
-                    
-                except json.JSONDecodeError as e:
-                    if attempt < max_retries - 1:
-                        time.sleep(2 ** attempt)
-                        continue
-                    raise ValueError(f"Invalid JSON response: {e}")
+                # Calculate metadata (consolidated from ops.py)
+                dt = int((time.time() - t0) * 1000)
+                meta = {
+                    "modelId": resp.model,
+                    "latencyMs": dt,
+                    "promptHash": prompt_hash_val,
+                    "systemVersion": self._system_version_hash(),
+                    "rawLen": len(raw),
+                    "attempts": attempt + 1,
+                    "temperature": temperature,
+                    "maxTokens": 200,
+                    "createdAt": self._now_iso(),
+                    "phase": operation,
+                }
+                
+                return obj, meta
                 
             except Exception as e:
-                if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
-                    continue
-                raise RuntimeError(f"OpenAI call failed after {max_retries} attempts: {e}")
-        
-        # Fallback if all retries fail
-        return {
+                last_err = e
+                if attempt >= self.max_retries:
+                    break
+                    
+                # Exponential backoff (from ops.py)
+                wait_time = self.base_delay * (2 ** attempt)
+                time.sleep(wait_time)
+                attempt += 1
+
+        # All retries exhausted - return error response
+        error_response = {
             "text": f"ERROR: Failed to process {operation}",
             "terms_used": [],
-            "warnings": [f"openai_failure: {operation}"]
+            "warnings": [f"openai_failure: {last_err}"]
         }
+        error_meta = {
+            "modelId": self.model,
+            "latencyMs": 0,
+            "promptHash": prompt_hash_val,
+            "error": str(last_err),
+            "operation": operation,
+            "createdAt": self._now_iso(),
+            "attempts": attempt + 1,
+            "phase": "error"
+        }
+        return error_response, error_meta
+    
+    # Consolidated helper methods from ops.py OpenAIResolver
+    
+    def _prompt_hash(self, system: str, user: str) -> str:
+        """Generate deterministic hash for system + user prompt combination."""
+        h = hashlib.sha256()
+        h.update(normalize_text(system).encode("utf-8"))
+        h.update(b"\n\n")
+        h.update(normalize_text(user).encode("utf-8"))
+        return h.hexdigest()
+
+    def _system_version_hash(self) -> str:
+        """Hash of current system prompt for versioning."""
+        return hashlib.sha256(normalize_text(SYSTEM_PROMPT).encode("utf-8")).hexdigest()
+
+    def _now_iso(self) -> str:
+        """Generate ISO-8601 timestamp for graph compatibility."""
+        return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+    def _extract_json(self, text: str) -> str:
+        """Extract JSON object from model output, handling stray prose."""
+        if not text:
+            raise ValueError("Empty model output")
+        
+        # Find the first '{' and last '}' to guard against stray prose
+        start = text.find("{")
+        end = text.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError("No JSON object found in model output")
+        
+        return text[start:end+1]
+
+    def _validate_obj(self, obj: Dict[str, Any]) -> None:
+        """Validate that object conforms to expected CF14 schema."""
+        if not isinstance(obj, dict):
+            raise ValueError("Output must be a JSON object")
+        
+        # Check required keys
+        if "text" not in obj or "terms_used" not in obj or "warnings" not in obj:
+            raise ValueError("Missing required keys (text, terms_used, warnings)")
+        
+        # Type validation
+        if not isinstance(obj["text"], str):
+            raise ValueError("'text' must be string")
+        
+        if not (isinstance(obj["terms_used"], list) and all(isinstance(t, str) for t in obj["terms_used"])):
+            raise ValueError("'terms_used' must be list[str]")
+        
+        if not (isinstance(obj["warnings"], list) and all(isinstance(w, str) for w in obj["warnings"])):
+            raise ValueError("'warnings' must be list[str]")

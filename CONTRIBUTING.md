@@ -1,204 +1,90 @@
-# Contributing to Chirality Framework
-**Status Last Updated**: August 24, 2025 at 11:19h
-**Note**: Always ask user for current date/time when updating status - AI doesn't have real-time access
-References to "CF14" are for the Chirality Framework version 14.
+# Contributing to the Chirality Framework
 
-## Overview
+First, thank you for considering contributing! This project is a direct, canonical implementation of the Chirality Framework algorithm, and we welcome contributions that refine, test, and document this core implementation.
 
-The Chirality Framework implements structured semantic computation through matrix operations and LLM semantic interpolation. Contributing requires understanding both the framework's methodology and its practical implementation.
+## Core Philosophy: The "Semantic Calculator"
+
+Please understand that this project is not a general-purpose, extensible framework. It is a **"semantic calculator"** designed to execute a fixed algorithm. Contributions should focus on improving the correctness, clarity, and observability of this algorithm, not on adding new framework features, plugins, or abstractions.
 
 ## Getting Started
 
 ### Prerequisites
 - Python 3.9+
-- Node.js 20.x (for Admin UI components)
-- Docker Desktop (for Neo4j)
-- OpenAI API key (for semantic operations)
+- An OpenAI API key (set as the `OPENAI_API_KEY` environment variable for live tests)
 
 ### Development Setup
+
 ```bash
-# Clone repository
-git clone [repository-url]
-cd chirality-semantic-framework
+# 1. Clone the repository
+git clone <repository-url>
+cd chirality-framework
 
-# Install dependencies
-pip install -r requirements.txt
-pip install -e .
+# 2. Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
-# Set up environment
-cp .env.example .env
-# Edit .env with your API keys
+# 3. Install dependencies, including development tools
+pip install -e ".[dev]"
 
-# Run tests
-python -m pytest chirality/tests/
+# 4. Run the offline test suite to verify setup
+pytest
 ```
 
-## Framework Concepts
+## How to Contribute
 
-### Semantic Operations
-The framework performs systematic semantic transformations:
-- **Semantic Multiplication (*)**: Combines concepts (e.g., "Values * Necessary" → "Essential Values")
-- **Semantic Addition (+)**: Concatenates semantic elements
-- **Matrix Operations**: Structured combination of semantic content according to the pattern of regular matrix dot-product operation
-
-### LLM Integration
-LLMs serve as "semantic interpolation engines" within structured operations, not as general reasoning tools.
-
-## Contributing Guidelines
+The most valuable contributions will be those that improve the core algorithm, its tests, or its documentation.
 
 ### Code Contributions
 
-**Matrix Operations**
-- Follow existing patterns in `chirality/core/ops.py`
-- Ensure dimensional compatibility checking
-- Maintain semantic meaning preservation
-- Add tests for new operations
+The core logic lives in `chirality/core/`.
 
-**Resolvers**
-- Implement the `Resolver` protocol
-- Handle errors gracefully
-- Provide deterministic outputs where possible
-- Document semantic operation behavior
-
-**Station Processing**
-- Follow S1→S2→S3 pattern
-- Maintain audit trails
-- Support human-in-the-loop validation
-- Preserve operation lineage
-
-### Documentation Contributions
-
-**Semantic Examples**
-- Provide clear input/output examples
-- Show semantic transformation reasoning
-- Document edge cases and limitations
-- Include validation criteria
-
-**Framework Usage**
-- Focus on practical implementation
-- Avoid overstated theoretical claims
-- Distinguish proven capabilities from speculation
-- Provide troubleshooting guidance
+*   **`operations.py`**: This is the heart of the calculator. It contains the `compute_cell_*` functions that implement the **Three-Stage Interpretation Pipeline**. If you are refining the algorithm, this is the primary file you will work in.
+*   **`cell_resolver.py`**: This class is the sole interface to the LLM. Its `assemble_prompt` method is responsible for the dynamic, fragment-based prompt construction. Refinements to the prompting strategy happen here.
+*   **`matrices.py`**: This file contains the canonical, fixed matrices (A, B, J). These should only be changed if the underlying Normative Specification of the Chirality Framework is updated.
 
 ### Testing Contributions
 
-**Semantic Operation Tests**
-- Test semantic consistency across operations
-- Validate matrix dimensional constraints
-- Check content integrity preservation
-- Test resolver behavior
+Our testing strategy is crucial for validating the calculator's correctness without making expensive LLM calls.
 
-**Integration Tests**
-- Full semantic valley execution
-- Error handling and recovery
+*   **Mock Resolver:** All core logic is tested against a `MockCellResolver` located in `tests/mocks.py`. This mock provides predictable, deterministic outputs.
+*   **Adding Tests:** New tests for the core operations should be added to `tests/core/test_operations.py`. Please follow the existing structure, testing each stage of the pipeline independently before testing the end-to-end cell computation.
+
+### Documentation Contributions
+
+Clarity is essential. The two primary documents are:
+
+*   **`README.md`**: The high-level project overview.
+*   **`docs/ALGORITHM.md`**: The definitive technical description of the canonical algorithm and the 3-stage pipeline.
+
+Improvements to these documents are highly welcome.
 
 ## Development Workflow
 
-### Branch Strategy
-- `main`: Stable releases
-- `develop`: Integration branch
-- `feature/*`: New capabilities
-- `fix/*`: Bug fixes
-- `docs/*`: Documentation updates
+We follow a standard GitHub flow:
 
-### Commit Messages
-Follow conventional commits:
+1.  Create a feature branch from `main` (e.g., `feature/refine-lensing-prompt`).
+2.  Make your changes, including adding or updating tests.
+3.  Ensure all tests pass (`pytest`).
+4.  Update documentation if applicable.
+5.  Submit a Pull Request to `main` with a clear description of your changes.
+
+## Commit Message Convention
+
+To maintain a clear and readable git history, this project follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification. Each commit message should be prefixed with a type that describes the change.
+
+**Common Types:**
+*   **feat:** A new feature or enhancement to the calculator's capabilities.
+*   **fix:** A bug fix in the algorithm or its implementation.
+*   **docs:** Changes to documentation (`.md` files, docstrings).
+*   **test:** Adding new tests or correcting existing ones.
+*   **refactor:** A code change that neither fixes a bug nor adds a feature.
+*   **style:** Changes that do not affect the meaning of the code (white-space, formatting, etc).
+*   **chore:** Changes to the build process or auxiliary tools.
+
+**Example:**
 ```
-feat(ops): add semantic cross product operation
-fix(resolver): handle API timeout gracefully
-docs(readme): update installation instructions
-test(matrix): add validation edge cases
+feat(operations): Add compute_matrix_X function
+
+This commit implements the next stage of the semantic valley, computing
+the verification matrix [X] from [K] and [J].
 ```
-
-### Pull Request Process
-1. Create feature branch from `develop`
-2. Implement changes with tests
-3. Update documentation
-4. Ensure all tests pass
-5. Submit PR with clear description
-6. Address review feedback
-7. Merge to `develop`
-
-## Code Standards
-
-### Python Code
-- Follow PEP 8 style guidelines
-- Use type hints for all functions
-- Include docstrings for public APIs
-- Handle errors explicitly
-- Maintain backward compatibility
-
-### Semantic Operations
-- Preserve meaning across transformations
-- Maintain operation determinism where possible
-- Document semantic reasoning
-- Provide validation criteria
-
-### Documentation
-- Write clear, practical examples
-- Avoid theoretical speculation
-- Focus on implementation guidance
-- Include troubleshooting information
-
-## Review Process
-
-### Technical Review
-- Code quality and style
-- Test coverage and quality
-- Performance implications
-- Security considerations
-
-### Semantic Review
-- Semantic operation validity
-- Framework consistency
-- Documentation accuracy
-- Example quality
-
-### Integration Review
-- Multi-service compatibility
-- Deployment considerations
-- User experience impact
-- Breaking change assessment
-
-## Getting Help
-
-### Questions
-- Check existing documentation first
-- Search previous issues
-- Ask specific, focused questions
-- Provide context and examples
-
-### Bug Reports
-Include:
-- Framework version
-- Environment details
-- Reproduction steps
-- Expected vs actual behavior
-- Error messages and logs
-
-### Feature Requests
-Include:
-- Use case description
-- Proposed approach
-- Framework integration
-- Backward compatibility impact
-
-## Community Guidelines
-
-### Respectful Collaboration
-- Focus on technical merit
-- Provide constructive feedback
-- Share knowledge openly
-- Support fellow contributors
-
-### Quality Standards
-- Prioritize working implementations over theoretical discussions
-- Maintain honest assessment of capabilities
-- Document limitations and known issues
-- Test thoroughly before contributing
-
-## Current Focus Areas
-
-See CONSOLIDATED_IMPROVEMENT_PLAN.md for active development priorities and ROADMAP.md for planned features.
-
-Thank you for contributing to the Chirality Framework!

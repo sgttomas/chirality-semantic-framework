@@ -5,7 +5,7 @@ Enforces dimensional constraints, modality alignment, and operation sequencing.
 """
 
 from typing import List, Dict, Any, Optional
-from .types import Cell, Matrix, MatrixType, Modality
+from .types import Cell, Matrix
 
 
 class CF14ValidationError(ValueError):
@@ -77,16 +77,13 @@ def validate_cell(cell: Cell) -> List[str]:
     if cell.col < 0:
         errors.append(f"Invalid column position: {cell.col}")
     
-    if not cell.content:
-        errors.append("Cell missing content")
-    elif not isinstance(cell.content, dict):
-        errors.append("Cell content must be dictionary")
-    elif "text" not in cell.content:
-        errors.append("Cell content missing 'text' field")
+    if not cell.value:
+        errors.append("Cell missing value")
+    elif not isinstance(cell.value, str):
+        errors.append("Cell value must be string")
     
-    # Validate modality
-    if cell.modality not in Modality:
-        errors.append(f"Invalid modality: {cell.modality}")
+    # Note: Modality validation removed - simplified architecture
+    # Cells now only have row, col, value, provenance
     
     return errors
 
@@ -107,13 +104,13 @@ def validate_matrix(matrix: Matrix) -> List[str]:
     if not matrix.id:
         errors.append("Matrix missing ID")
     
-    if matrix.type not in MatrixType:
-        errors.append(f"Invalid matrix type: {matrix.type}")
+    # Note: MatrixType validation removed - simplified architecture
+    # Matrices identified by name (A, B, C, D, F, J)
     
     # Validate dimensions
-    rows, cols = matrix.dimensions
+    rows, cols = matrix.shape
     if rows <= 0 or cols <= 0:
-        errors.append(f"Invalid dimensions: {matrix.dimensions}")
+        errors.append(f"Invalid dimensions: {matrix.shape}")
     
     # Validate cells
     if not matrix.cells:
@@ -183,16 +180,8 @@ def validate_modality_alignment(matrix_a: Matrix, matrix_b: Matrix) -> List[str]
     """
     errors = []
     
-    # Get modality distributions
-    modalities_a = {cell.modality for cell in matrix_a.cells}
-    modalities_b = {cell.modality for cell in matrix_b.cells}
-    
-    # Check compatibility based on CF14 rules
-    if Modality.AXIOM in modalities_a and Modality.INSTANCE in modalities_b:
-        errors.append("Cannot multiply axioms with instances directly")
-    
-    if Modality.VALUE in modalities_a and Modality.THEORY in modalities_b:
-        errors.append("Cannot multiply values with theories directly")
+    # Note: Modality alignment removed - simplified architecture
+    # All semantic validation now handled by the 3-stage pipeline
     
     return errors
 
@@ -213,18 +202,18 @@ def validate_matrix_dimensions(matrix_a: Matrix, matrix_b: Matrix, operation: st
     
     if operation == "multiply":
         # For multiplication: A.cols must equal B.rows
-        if matrix_a.dimensions[1] != matrix_b.dimensions[0]:
+        if matrix_a.shape[1] != matrix_b.shape[0]:
             errors.append(
                 f"Incompatible dimensions for multiplication: "
-                f"{matrix_a.dimensions} × {matrix_b.dimensions}"
+                f"{matrix_a.shape} × {matrix_b.shape}"
             )
     
     elif operation == "add":
         # For addition: dimensions must match exactly
-        if matrix_a.dimensions != matrix_b.dimensions:
+        if matrix_a.shape != matrix_b.shape:
             errors.append(
                 f"Incompatible dimensions for addition: "
-                f"{matrix_a.dimensions} vs {matrix_b.dimensions}"
+                f"{matrix_a.shape} vs {matrix_b.shape}"
             )
     
     return errors
