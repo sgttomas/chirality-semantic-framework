@@ -38,7 +38,7 @@ DIM_STYLE = {"dim": True}
 
 
 @click.group()
-@click.version_option(version="14.4.0", prog_name="Chirality Framework")
+@click.version_option(version="15.0.0", prog_name="Chirality Framework")
 def cli():
     """
     Chirality Framework - CF14 Semantic Calculator
@@ -273,7 +273,7 @@ def info():
     click.echo(click.style("Chirality Framework - CF14 Semantic Calculator", **STAGE_STYLE))
     click.echo(click.style("=" * 50, **DIM_STYLE))
     click.echo()
-    click.echo("Version: 14.4.0")
+    click.echo("Version: 15.0.0")
     click.echo("Algorithm: 3-stage semantic interpretation pipeline")
     click.echo()
     click.echo(click.style("Canonical Matrices:", **INFO_STYLE))

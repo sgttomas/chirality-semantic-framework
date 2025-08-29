@@ -1,6 +1,6 @@
 # Chirality Framework: A Semantic Calculator (CF14)
 
-**Version: 14.4.0** | **Status: Refactored to Canonical Algorithm**
+**Version: 15.0.0** | **Status: Refactored to Canonical Algorithm**
 
 The Chirality Framework is a direct, simple, and observable implementation of a fixed, canonical algorithm for structured problem-solving. It is not a general-purpose framework but a "semantic calculator" designed to execute a specific sequence of semantic transformations.
 

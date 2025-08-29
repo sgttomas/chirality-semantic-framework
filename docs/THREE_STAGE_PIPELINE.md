@@ -1,6 +1,6 @@
 # The Three-Stage Interpretation Pipeline: The "Secret Sauce" of CF14
 
-**Version: 14.4.0** | **Updated: August 2025**
+**Version: 15.0.0** | **Updated: August 2025**
 
 This document provides the definitive explanation of the Three-Stage Interpretation Pipeline—the core algorithm that transforms mechanical combinations into meaningful semantic insights. This pipeline is the "secret sauce" that makes the Chirality Framework a powerful semantic calculator rather than just a matrix manipulation tool.
 

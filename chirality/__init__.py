@@ -5,7 +5,7 @@ A fixed, canonical "semantic calculator" for structured problem-solving.
 Not a framework but a precise algorithm with a 3-stage interpretation pipeline.
 """
 
-__version__ = "14.4.0"
+__version__ = "15.0.0"
 __author__ = "Chirality Framework Team"
 
 from .core.types import Cell, Matrix, Operation
