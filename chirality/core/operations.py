@@ -18,9 +18,10 @@ from .types import Cell, Matrix
 from .context import SemanticContext
 from .cell_resolver import CellResolver
 from .tracer import JSONLTracer
+from ..exporters.working_memory_exporter import Neo4jWorkingMemoryExporter
 
 
-def compute_cell_C(i: int, j: int, A: Matrix, B: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None) -> Cell:
+def compute_cell_C(i: int, j: int, A: Matrix, B: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None, exporter: Optional['Neo4jWorkingMemoryExporter'] = None) -> Cell:
     """
     Complete 3-stage pipeline for computing C[i,j] = A[i,:] dot B[:,j]
     
@@ -133,7 +134,7 @@ def compute_cell_C(i: int, j: int, A: Matrix, B: Matrix, resolver: CellResolver,
             "stage_plan": ["combinatorial", "semantic", "lensing"]
         })
 
-    return Cell(
+    cell = Cell(
         row=i,
         col=j,
         value=final_meaning,
@@ -146,9 +147,15 @@ def compute_cell_C(i: int, j: int, A: Matrix, B: Matrix, resolver: CellResolver,
             "traced": tracer is not None
         }
     )
+    
+    # Export to Neo4j if exporter is provided
+    if exporter:
+        exporter.export_cell_computation(cell, context_for_stage3)
+    
+    return cell
 
 
-def compute_cell_F(i: int, j: int, J: Matrix, C: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None) -> Cell:
+def compute_cell_F(i: int, j: int, J: Matrix, C: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None, exporter: Optional['Neo4jWorkingMemoryExporter'] = None) -> Cell:
     """
     Element-wise operation F[i,j] = J[i,j] ⊙ C[i,j] with lensing
     
@@ -224,7 +231,7 @@ def compute_cell_F(i: int, j: int, J: Matrix, C: Matrix, resolver: CellResolver,
             "stage_plan": ["element-wise", "lensing"]
         })
 
-    return Cell(
+    cell = Cell(
         row=i,
         col=j,
         value=final_meaning,
@@ -237,9 +244,15 @@ def compute_cell_F(i: int, j: int, J: Matrix, C: Matrix, resolver: CellResolver,
             "traced": tracer is not None
         }
     )
+    
+    # Export to Neo4j if exporter is provided
+    if exporter:
+        exporter.export_cell_computation(cell, context_for_stage2)
+    
+    return cell
 
 
-def synthesize_cell_D(i: int, j: int, A: Matrix, F: Matrix, problem: str, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None) -> Cell:
+def synthesize_cell_D(i: int, j: int, A: Matrix, F: Matrix, problem: str, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None, exporter: Optional['Neo4jWorkingMemoryExporter'] = None) -> Cell:
     """
     Synthesis operation using the canonical D formula:
     D[i,j] = A[i,j] + "applied to frame the problem of {problem} and" + F[i,j] + "to resolve the problem"
@@ -314,7 +327,7 @@ def synthesize_cell_D(i: int, j: int, A: Matrix, F: Matrix, problem: str, resolv
             "stage_plan": ["synthesis", "lensing"]
         })
 
-    return Cell(
+    cell = Cell(
         row=i,
         col=j,
         value=final_meaning,
@@ -328,8 +341,14 @@ def synthesize_cell_D(i: int, j: int, A: Matrix, F: Matrix, problem: str, resolv
         }
     )
 
+    # Export to Neo4j if exporter is provided
+    if exporter:
+        exporter.export_cell_computation(cell, context_for_stage2)
 
-def compute_matrix_C(A: Matrix, B: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None) -> Matrix:
+    return cell
+
+
+def compute_matrix_C(A: Matrix, B: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None, exporter: Optional['Neo4jWorkingMemoryExporter'] = None) -> Matrix:
     """
     Convenience wrapper - loops over compute_cell_C. NO semantic logic here.
     
@@ -341,7 +360,7 @@ def compute_matrix_C(A: Matrix, B: Matrix, resolver: CellResolver, valley_summar
     for i in range(3):  # A is 3x4
         row_cells = []
         for j in range(4):  # B is 4x4, so result is 3x4
-            cell = compute_cell_C(i, j, A, B, resolver, valley_summary, tracer)
+            cell = compute_cell_C(i, j, A, B, resolver, valley_summary, tracer, exporter)
             row_cells.append(cell)
         cells.append(row_cells)
 
@@ -354,13 +373,13 @@ def compute_matrix_C(A: Matrix, B: Matrix, resolver: CellResolver, valley_summar
     )
 
 
-def compute_matrix_F(J: Matrix, C: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None) -> Matrix:
+def compute_matrix_F(J: Matrix, C: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None, exporter: Optional['Neo4jWorkingMemoryExporter'] = None) -> Matrix:
     """Convenience wrapper - loops over compute_cell_F"""
     cells = []
     for i in range(3):  # Both J and C are 3x4
         row_cells = []
         for j in range(4):
-            cell = compute_cell_F(i, j, J, C, resolver, valley_summary, tracer)
+            cell = compute_cell_F(i, j, J, C, resolver, valley_summary, tracer, exporter)
             row_cells.append(cell)
         cells.append(row_cells)
 
@@ -373,13 +392,13 @@ def compute_matrix_F(J: Matrix, C: Matrix, resolver: CellResolver, valley_summar
     )
 
 
-def synthesize_matrix_D(A: Matrix, F: Matrix, problem: str, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None) -> Matrix:
+def synthesize_matrix_D(A: Matrix, F: Matrix, problem: str, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None, exporter: Optional[Neo4jWorkingMemoryExporter] = None) -> Matrix:
     """Convenience wrapper - loops over synthesize_cell_D"""
     cells = []
     for i in range(3):
         row_cells = []
         for j in range(4):
-            cell = synthesize_cell_D(i, j, A, F, problem, resolver, valley_summary, tracer)
+            cell = synthesize_cell_D(i, j, A, F, problem, resolver, valley_summary, tracer, exporter)
             row_cells.append(cell)
         cells.append(row_cells)
 
