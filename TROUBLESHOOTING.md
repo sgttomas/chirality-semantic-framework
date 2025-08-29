@@ -101,324 +101,79 @@ telnet localhost 7687
 
 ### Semantic Operation Errors
 
-#### Matrix Validation Failures
-**Problem**: Invalid matrix format
-```
-ValidationError: Matrix shape [3, 4] doesn't match cells count 10
-```
-
-**Solutions**:
-```python
-# Check matrix structure
-{
-  "shape": [3, 4],  # Should be 3 rows, 4 columns = 12 cells
-  "cells": [
-    # Must have exactly 12 cell objects
-    {"row": 0, "col": 0, "value": "..."},
-    {"row": 0, "col": 1, "value": "..."},
-    # ... 10 more cells
-  ]
-}
-
-# Validate matrix before operation
-python -m chirality.cli validate --matrix matrix_A.json
-```
-
-#### Dimension Mismatch
-**Problem**: Incompatible matrices for multiplication
-```
-DimensionError: Cannot multiply [3,4] * [3,4] matrices
-```
-
-**Solutions**:
-```python
-# Matrix multiplication requires: A.cols == B.rows
-# For A[3,4] * B[m,n]: need B[4,n]
-
-# Fix matrix B dimensions
-matrix_b = {
-  "shape": [4, 4],  # Changed from [3,4] to [4,4]
-  "cells": [
-    # Add cells for row 3 (index 3)
-    {"row": 3, "col": 0, "value": "..."},
-    {"row": 3, "col": 1, "value": "..."},
-    {"row": 3, "col": 2, "value": "..."},
-    {"row": 3, "col": 3, "value": "..."}
-  ]
-}
-```
-
 #### Semantic Resolution Failures
-**Problem**: LLM returns invalid semantic combinations
+**Problem**: The LLM returns responses that are nonsensical, inconsistent, or not in the correct JSON format.
 ```
-ResolverError: OpenAI API returned non-semantic response
-```
-
-**Solutions**:
-```bash
-# Use Echo resolver for testing
-python -m chirality.cli multiply --resolver echo --A matrix_A.json --B matrix_B.json
-
-# Check OpenAI model availability
-curl https://api.openai.com/v1/models \
-  -H "Authorization: Bearer $OPENAI_API_KEY"
-
-# Try different temperature settings
-# Lower temperature (0.1) for more consistent results
-# Higher temperature (0.7) for more creative combinations
-
-# Check input matrix content quality
-# Ensure cells contain meaningful semantic concepts
-# Avoid empty strings, special characters, or non-semantic content
-```
-
-### Performance Issues
-
-#### Slow Semantic Operations
-**Problem**: Operations take longer than 30 seconds
-```
-TimeoutError: Semantic multiplication exceeded timeout
+ResolverError: OpenAI API returned non-semantic response or invalid JSON.
 ```
 
 **Solutions**:
-```bash
-# Check network latency to OpenAI
-curl -w "%{time_total}" https://api.openai.com/v1/models
+The entire system is designed for observability to handle these cases.
 
-# Use smaller matrices for testing
-# Start with 2x2 or 3x3 matrices
+1.  **Use the `--verbose` flag.** This is the most powerful debugging tool. It shows you the exact output of each stage of the 3-stage pipeline, so you can pinpoint where the error is occurring (e.g., did the error happen during the initial semantic resolution, or during the final ontological lensing?).
+    ```bash
+    # Run a single cell computation with stage-by-stage output
+    python -m chirality.cli compute-cell C --i 0 --j 0 --verbose
+    ```
 
-# Enable operation caching
-# Check if same operation was performed recently
+2.  **Test with the Echo Resolver.** The `echo` resolver bypasses the LLM entirely and returns deterministic, predictable results. This helps you verify that the pipeline mechanics and context passing are working correctly, isolating the problem to the LLM call itself.
+    ```bash
+    # Use the mock resolver to check the pipeline logic
+    python -m chirality.cli compute-cell C --i 0 --j 0 --resolver echo
+    ```
 
-# Monitor system resources
-top  # Check CPU/memory usage
-```
-
-#### Memory Usage
-**Problem**: High memory consumption with large matrices
-```
-MemoryError: Unable to allocate memory for matrix operation
-```
-
-**Solutions**:
-```python
-# Process matrices in chunks
-# Use streaming for large operations
-# Implement lazy loading for matrix cells
-
-# Check available memory
-import psutil
-print(f"Available memory: {psutil.virtual_memory().available / 1024**3:.1f} GB")
-
-# Optimize matrix storage
-# Remove unnecessary metadata
-# Use efficient serialization
-```
+3.  **Check the `SYSTEM_PROMPT`.** The core instructions for the LLM are in `chirality/core/prompts.py`. Ensure the `SYSTEM_PROMPT` constant correctly defines the output contract and the rules for the semantic operations.
 
 ### CLI Issues
 
 #### Command Not Found
-**Problem**: `chirality` command not available
+**Problem**: `chirality` command not available.
 ```
 bash: chirality: command not found
 ```
 
 **Solutions**:
+1.  **Use the module form.** This is the most reliable way to run the CLI.
+    ```bash
+    python3 -m chirality.cli --help
+    ```
+2.  **Ensure development installation.** The package must be installed in editable mode for the CLI commands to be available.
+    ```bash
+    # Reinstall in editable mode from the project root
+    pip install -e .
+    ```
+
+### Debugging the Semantic Calculator
+
+#### How to Trace an Operation
+**Problem**: You need a complete, machine-readable log of a cell's computation.
+
+**Solution**: Use the `--trace` flag. This will generate a detailed JSONL file in the `traces/` directory, containing a line for each stage of the pipeline with its inputs and outputs.
 ```bash
-# Use module form
-python -m chirality.cli --help
-
-# Check installation
-pip show chirality-framework
-pip list | grep chirality
-
-# Install in development mode
-pip install -e .
-
-# Add to PATH if using global install
-export PATH=$PATH:~/.local/bin
+# This creates a file like traces/<thread_id>/C-20250828-123456.jsonl
+python -m chirality.cli compute-cell C --i 0 --j 0 --trace
 ```
 
-#### Import Errors
-**Problem**: Module import failures
-```
-ModuleNotFoundError: No module named 'chirality.core'
-```
+#### How to Inspect a Specific Stage
+**Problem**: You want to see the input and output of just one part of the 3-stage pipeline.
 
-**Solutions**:
+**Solution**: Use the `--verbose` flag with the `compute-cell` command. It prints the results of each stage sequentially, allowing you to inspect the data as it is transformed.
 ```bash
-# Check current directory
-pwd  # Should be in project root
-
-# Verify package structure
-ls -la chirality/
-ls -la chirality/core/
-
-# Check Python path
-python -c "import sys; print('\n'.join(sys.path))"
-
-# Reinstall package
-pip uninstall chirality-framework
-pip install -e .
+# See the output of Stage 1, Stage 2, and Stage 3
+python -m chirality.cli compute-cell C --i 0 --j 0 --verbose
 ```
 
-### Multi-Service Issues
+#### How to Test a Change
+**Problem**: You've modified the logic in `operations.py` or `cell_resolver.py` and want to verify its correctness without running a full pipeline.
 
-#### Port Conflicts
-**Problem**: Services fail to start on default ports
-```
-OSError: [Errno 48] Address already in use: localhost:8080
-```
-
-**Solutions**:
+**Solution**: Run the unit tests. The test suite uses a `MockCellResolver` to test the logic offline, providing fast and deterministic results.
 ```bash
-# Check what's using ports
-lsof -i :8080
-lsof -i :7474
-lsof -i :7687
-
-# Kill conflicting processes
-kill $(lsof -t -i:8080)
-
-# Use different ports
-export GRAPHQL_PORT=8081
-export NEO4J_HTTP_PORT=7475
-export NEO4J_BOLT_PORT=7688
-
-# Update service configurations
-```
-
-#### Service Dependencies
-**Problem**: GraphQL service can't connect to Neo4j
-```
-ServiceError: Neo4j database unavailable
-```
-
-**Solutions**:
-```bash
-# Start services in order
-# 1. Neo4j first
-docker start neo4j
-
-# 2. Wait for Neo4j to be ready
-until curl -f http://localhost:7474; do sleep 1; done
-
-# 3. Start GraphQL service
-npm run dev
-
-# Check service health
-curl http://localhost:8080/health
-curl http://localhost:7474
-```
-
-### Development Issues
-
-#### Hot Reloading Problems
-**Problem**: Changes not reflected in running services
-```
-# Code changes don't appear in CLI output
-```
-
-**Solutions**:
-```bash
-# Reinstall in development mode
-pip install -e .
-
-# Clear Python cache
-find . -name "*.pyc" -delete
-find . -name "__pycache__" -delete
-
-# Restart services
-# Kill all processes and restart
-
-# Check file watchers
-# Some systems have file watching limits
-echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
-```
-
-#### Testing Failures
-**Problem**: Tests fail with import or connection errors
-```
-pytest: ImportError or ConnectionError
-```
-
-**Solutions**:
-```bash
-# Run tests with proper environment
-export PYTHONPATH=.
-python -m pytest chirality/tests/
-
-# Use test-specific configuration
-export NEO4J_URI=bolt://localhost:7687
-export NEO4J_USER=neo4j  
-export NEO4J_PASSWORD=test_password
-
-# Skip integration tests if needed
-python -m pytest chirality/tests/ -k "not integration"
-
-# Run individual test files
-python -m pytest chirality/tests/test_ops.py -v
-```
-
-## Debugging Techniques
-
-### Enable Detailed Logging
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-
-# Or for specific modules
-logging.getLogger('chirality.core.ops').setLevel(logging.DEBUG)
-```
-
-### Matrix Content Inspection
-```bash
-# Pretty print matrix files
-python -c "
-import json
-with open('matrix_A.json') as f:
-    print(json.dumps(json.load(f), indent=2))
-"
-
-# Validate specific matrix
-python -c "
-from chirality.core.validate import validate_matrix
-from chirality.core.serialize import load_matrix
-matrix = load_matrix('matrix_A.json')
-validate_matrix(matrix)
-print('Matrix is valid')
-"
-```
-
-### Operation Tracing
-```python
-# Enable operation tracing
-from chirality.core.ops import op_multiply
-from chirality import OpenAIResolver
-
-resolver = OpenAIResolver(api_key="your_key")
-# Add debug logging to resolver
-resolver.debug = True
-
-result, operation = op_multiply("debug_thread", matrix_a, matrix_b, resolver)
-print(f"Operation details: {operation}")
-```
-
-### Neo4j Query Debugging
-```cypher
-// Check stored matrices
-MATCH (m:Matrix) RETURN m LIMIT 10;
-
-// View operation lineage
-MATCH (m1:Matrix)-[r:DERIVES]->(m2:Matrix) 
-RETURN m1.name, r.operation, m2.name;
-
-// Check for orphaned nodes
-MATCH (n) WHERE NOT (n)--() RETURN count(n);
+# Run the entire test suite from the project root
+pytest
 ```
 
 ## Getting Help
+
 
 ### Check Existing Issues
 1. Search project issues on GitHub

@@ -81,6 +81,7 @@ config/secrets/
 
 # Development History (contains sensitive info)
 devhistory/
+archive/
 
 # Neo4j
 neo4j-data/

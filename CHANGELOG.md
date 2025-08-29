@@ -56,6 +56,12 @@ Repository boundaries align with functional responsibilities
 
 ## [Unreleased]
 
+### Changed
+- **Major Architectural Refactoring**: Transformed the project from a flexible, extensible framework to a direct "semantic calculator." The new architecture is simpler, more observable, and implements a fixed, three-stage interpretation pipeline as its core algorithm.
+- All core logic is now implemented as cell-first functions with detailed tracing.
+- The CLI has been rewritten to focus on debugging and observing the new pipeline.
+- All documentation has been updated to reflect the new "canonical algorithm" philosophy.
+
 ### Removed - Duplications between the chirality-ai-app and the chirality-semantic-framework (August 24, 2025)
 - **chirality-ai-app segregation**: Complete segregation of frontend and backend functionality, with the graph database as the only point of contact.
 - **undoing much of the previous work**: Because of confusions around the working directory there was duplication of functionality from the frontend (chirality-ai-app) into the backend (chirality-semantic-framework)

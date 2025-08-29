@@ -1,130 +1,44 @@
-# Agents in the Chirality Framework
+# Agent Protocol for the Chirality Framework
 
-*Practical AI agent workflows for Chirality Framework documentation maintenance and git integration*
-**Status Last Updated**: August 24, 2025 at 11:19h
-**Note**: Always ask user for current date/time when updating status - AI doesn't have real-time access
-References to "CF14" are for the Chirality Framework version 14.
+**Version:** 15.0.0
 
-## Overview
+## 1. Core Philosophy for AI Agents
 
-This document defines specific, practical agent workflows within CF14, focusing on automated documentation maintenance triggered by git commits. Rather than speculative AI capabilities, this covers immediate, implementable agent patterns.
+Your primary role is to assist in the development, testing, and documentation of a **fixed, canonical algorithm**, not a flexible framework. The project is a "semantic calculator" with a deterministic, three-stage interpretation pipeline at its core. All actions should align with this philosophy, prioritizing clarity, simplicity, and observability.
 
-## Primary Agent Workflow: Documentation Maintenance
+## 2. Primary Development Tasks
 
-### Git Commit Documentation Agent
+Your work will focus on the core components of the semantic calculator.
 
-**Trigger**: Git commit with CF14 documentation assessment (see [COMMIT_HOOKS.md](COMMIT_HOOKS.md))
+### Analyzing the Core Logic
+- **Source of Truth:** The core algorithm is in `chirality/core/operations.py`. When analyzing the logic, focus on the `compute_cell_*` functions and their implementation of the 3-stage pipeline (Combinatorial -> Semantic Resolution -> Lensing).
+- **Prompting Engine:** The `chirality/core/cell_resolver.py` is the sole interface to the LLM. Its `assemble_prompt` method is key to how context is passed to the LLM.
+- **Canonical Data:** The fixed input matrices are defined as constants in `chirality/core/matrices.py`.
 
-**Function**: Automate the documentation review cycle following systematic CF14 methodology
+### Debugging and Verification
+- **Use the CLI:** The command-line interface is your most powerful tool for debugging.
+  ```bash
+  # Verify the output of a single cell
+  python -m chirality.cli compute-cell C --i 0 --j 0
 
-#### Agent Workflow Steps
+  # See the full 3-stage pipeline for a cell
+  python -m chirality.cli compute-cell C --i 0 --j 0 --verbose
+  ```
+- **Use the Tracer:** For detailed, machine-readable logs, run commands with the `--trace` flag. The output will be in the `traces/` directory.
 
-1. **Commit Analysis Agent**
-   - Parse git commit message for CF14 documentation assessment
-   - Extract trigger level, affected categories, and methodology recommendation
-   - Generate Matrix A (current state) from commit context
+### Testing
+- **Run the Test Suite:** Before and after making any changes, run the full test suite to ensure correctness.
+  ```bash
+  # Run all offline unit tests from the project root
+  pytest
+  ```
+- **Writing New Tests:** New tests should be added to `tests/core/test_operations.py`. Use the `MockCellResolver` from `tests/mocks.py` to test algorithmic logic without making live LLM calls.
 
-2. **Plan Generation Agent**
-   - Use commit analysis as Matrix A input
-   - Apply recommended methodology as Matrix B
-   - Generate CONSOLIDATED_IMPROVEMENT_PLAN through semantic multiplication
-   - Create specific task list with priorities and timelines
+## 3. Documentation Tasks
 
-3. **Documentation Update Agent**
-   - Execute systematic updates following generated plan
-   - Apply improvements to identified documents
-   - Maintain reasoning trace of all changes made
-   - Ensure consistency across document updates
+When asked to update documentation, your primary focus should be on these two files:
 
-4. **Status Tracking Agent**
-   - Update KEY_PROJECT_FILES.md with new document statuses
-   - Track completion of improvement phases
-   - Generate progress reports and validation metrics
+- **`README.md`**: The high-level introduction to the "semantic calculator."
+- **`docs/ALGORITHM.md`**: The definitive technical reference for the 3-stage pipeline and canonical matrices.
 
-5. **Commit Revision Agent**
-   - Generate updated commit message with review completion details
-   - Include references to reasoning traces and updated documents
-   - Create summary of systematic improvements completed
-
-## Practical Agent Examples
-
-### Example 1: API Change Documentation Update
-
-**Scenario**: Developer commits new CLI command implementation
-
-**Agent Workflow**:
-```
-Git Commit → Commit Analysis Agent detects API change
-→ Plan Generation Agent creates focused update plan for API.md and README.md
-→ Documentation Update Agent adds new command examples and usage patterns
-→ Status Tracking Agent marks API.md as "UPDATED"
-→ Commit Revision Agent updates commit message with documentation changes
-```
-
-### Example 2: Architecture Evolution Documentation
-
-**Scenario**: Major system refactoring committed with architecture impact
-
-**Agent Workflow**:
-```
-Git Commit → Commit Analysis Agent identifies architecture impact
-→ Plan Generation Agent creates comprehensive review covering ARCHITECTURE.md, SPECULATIVE_CLAIMS.md
-→ Documentation Update Agent systematically updates technical details and capability assessments
-→ Status Tracking Agent updates multiple document statuses
-→ Commit Revision Agent provides complete review summary
-```
-
-### Example 3: Bug Fix with User Impact
-
-**Scenario**: Bug fix that affects user workflows
-
-**Agent Workflow**:
-```
-Git Commit → Commit Analysis Agent detects user impact
-→ Plan Generation Agent focuses on TROUBLESHOOTING.md and API.md updates
-→ Documentation Update Agent adds troubleshooting guidance and corrects examples
-→ Status Tracking Agent tracks focused improvements
-→ Commit Revision Agent documents user-facing improvements
-```
-
-## Agent Implementation Architecture
-
-### Agent Orchestration
-
-```python
-class DocumentationReviewOrchestrator:
-    def __init__(self):
-        self.agents = {
-            "commit_analysis": CommitAnalysisAgent("commit_analysis"),
-            "plan_generation": PlanGenerationAgent("plan_generation"),
-            "documentation_update": DocumentationUpdateAgent("documentation_update"),
-            "status_tracking": StatusTrackingAgent("status_tracking"),
-            "commit_revision": CommitRevisionAgent("commit_revision")
-        }
-    
-    def execute_review_cycle(self, commit_hash: str) -> Dict:
-        # Orchestrate complete documentation review cycle
-        # Maintain complete reasoning trace
-        # Return summary of all improvements
-        pass
-```
-
-### Automation Scope
-
-**What Agents Handle Automatically**:
-- Parsing commit messages for documentation triggers
-- Generating improvement plans following CF14 methodology
-- Updating document content with systematic improvements
-- Tracking status changes in KEY_PROJECT_FILES.md
-- Creating updated commit messages with review summaries
-
-**What Requires Human Oversight**:
-- Validating quality of documentation improvements
-- Approving major structural changes to documents
-- Reviewing complex technical accuracy updates
-- Final approval of updated commit messages
-
-
----
-
-*This document focuses on practical, implementable agent workflows that enhance CF14's systematic documentation maintenance through automated git workflow integration, ensuring that documentation quality evolves continuously with minimal human overhead.*
+Ensure all documentation accurately reflects the current, simplified architecture.

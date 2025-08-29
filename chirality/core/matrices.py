@@ -35,11 +35,11 @@ MATRIX_A = Matrix(
     name="A",
     station="Problem Statement",
     row_labels=["Normative", "Operative", "Evaluative"],
-    col_labels=["Guiding", "Applying", "Judging", "Reflecting"],
+    col_labels=["Guiding", "Applying", "Judging", "Reviewing"],
     cells=_create_matrix_cells([
         ["Values", "Actions", "Benchmarks", "Feedback"],
-        ["Principles", "Methods", "Standards", "Adaptation"],
-        ["Objectives", "Coordination", "Evaluation", "Consolidation"]
+        ["Standards", "Methods", "Decisions", "Adaptation"],
+        ["Objectives", "Coordination", "Evaluation", "Refinement"]
     ])
 )
 
@@ -48,21 +48,21 @@ MATRIX_B = Matrix(
     name="B",
     station="Problem Statement",
     row_labels=["Data", "Information", "Knowledge", "Wisdom"],
-    col_labels=["Determinacy", "Sufficiency", "Completeness", "Consistency"],
+    col_labels=["Necessicity (vs Contingency)", "Sufficiency", "Completeness", "Consistency"],
     cells=_create_matrix_cells([
-        ["Necessary", "Sufficient", "Complete", "Probability"],
-        ["Contingent", "Insufficient", "Incomplete", "Possibility"],
-        ["Fundamental", "Appropriate", "Holistic", "Feasibility"],
-        ["Best Practices", "Limits of", "Justification for", "Practicality"]
+        ["Necessary vs Contingent", "Sufficient", "Complete", "Consistent"],
+        ["Relevant", "Actionable", "Contextual", "Congruent"],
+        ["Fundamental", "Effective", "Systematic", "Coherent"],
+        ["Essential", "Optimal", "Holistic", "Principled"]
     ])
 )
 
 # Fixed canonical Matrix J (3x4) - Truncated B without "Wisdom" row
 MATRIX_J = Matrix(
     name="J",
-    station="Objectives",
+    station="Verification",
     row_labels=["Data", "Information", "Knowledge"],  # No "Wisdom" row
-    col_labels=["Determinacy", "Sufficiency", "Completeness", "Consistency"],
+    col_labels=["Necessity (vs Contingency)", "Sufficiency", "Completeness", "Consistency"],
     cells=_create_matrix_cells([
         ["Necessary", "Sufficient", "Complete", "Probability"],
         ["Contingent", "Insufficient", "Incomplete", "Possibility"],
