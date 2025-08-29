@@ -12,6 +12,10 @@ import json
 import sys
 from pathlib import Path
 from typing import Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file in project root
+load_dotenv(override=True)
 
 # Import core components
 from .core.types import Cell, Matrix
@@ -27,6 +31,7 @@ from .core.operations import (
 )
 from .core.cell_resolver import CellResolver
 from .core.resolvers import EchoResolver
+from .exporters.working_memory_exporter import Neo4jWorkingMemoryExporter
 from .core.tracer import JSONLTracer
 
 # Click styling for better output

@@ -14,11 +14,20 @@ that produce predictable, meaningful outputs from canonical inputs.
 """
 
 from typing import List, Optional
+from dataclasses import dataclass
 from .types import Cell, Matrix
 from .context import SemanticContext
 from .cell_resolver import CellResolver
 from .tracer import JSONLTracer
 from ..exporters.working_memory_exporter import Neo4jWorkingMemoryExporter
+
+
+@dataclass
+class SimpleResult:
+    """Simple result object for tracer compatibility."""
+    text: str
+    terms_used: List[str] 
+    warnings: List[str]
 
 
 def compute_cell_C(i: int, j: int, A: Matrix, B: Matrix, resolver: CellResolver, valley_summary: str, tracer: Optional[JSONLTracer] = None, exporter: Optional['Neo4jWorkingMemoryExporter'] = None) -> Cell:
@@ -66,11 +75,11 @@ def compute_cell_C(i: int, j: int, A: Matrix, B: Matrix, resolver: CellResolver,
             j=j
         )
         # Tracer expects cell context and result - we'll adapt SemanticContext
-        tracer.trace_stage("product:combinatorial", stage1_context, {
-            "text": ", ".join(raw_products),
-            "terms_used": [f"k={k}" for k in range(len(raw_products))],
-            "warnings": []
-        }, {
+        tracer.trace_stage("product:combinatorial", stage1_context, SimpleResult(
+            text=", ".join(raw_products),
+            terms_used=[f"k={k}" for k in range(len(raw_products))],
+            warnings=[]
+        ), {
             "station": "Requirements", 
             "valley_summary": valley_summary,
             "products": raw_products
@@ -96,11 +105,11 @@ def compute_cell_C(i: int, j: int, A: Matrix, B: Matrix, resolver: CellResolver,
         
         # Trace each individual semantic resolution
         if tracer:
-            tracer.trace_stage(f"product:k={k}", context_for_stage2, {
-                "text": concept,
-                "terms_used": product_pair.split(" * "),
-                "warnings": []
-            }, {
+            tracer.trace_stage(f"product:k={k}", context_for_stage2, SimpleResult(
+                text=concept,
+                terms_used=product_pair.split(" * "),
+                warnings=[]
+            ), {
                 "station": "Requirements", 
                 "valley_summary": valley_summary,
                 "products": [product_pair]
@@ -124,11 +133,11 @@ def compute_cell_C(i: int, j: int, A: Matrix, B: Matrix, resolver: CellResolver,
     
     # Trace Stage 3 (lensing)
     if tracer:
-        tracer.trace_stage("final", context_for_stage3, {
-            "text": final_meaning,
-            "terms_used": resolved_concepts,
-            "warnings": []
-        }, {
+        tracer.trace_stage("final", context_for_stage3, SimpleResult(
+            text=final_meaning,
+            terms_used=resolved_concepts,
+            warnings=[]
+        ), {
             "station": "Requirements", 
             "valley_summary": valley_summary,
             "stage_plan": ["combinatorial", "semantic", "lensing"]
@@ -195,11 +204,11 @@ def compute_cell_F(i: int, j: int, J: Matrix, C: Matrix, resolver: CellResolver,
     
     # Trace Stage 1 (element-wise semantic resolution)
     if tracer:
-        tracer.trace_stage("element-wise", context_for_stage1, {
-            "text": resolved_concept,
-            "terms_used": element_pair.split(" * "),
-            "warnings": []
-        }, {
+        tracer.trace_stage("element-wise", context_for_stage1, SimpleResult(
+            text=resolved_concept,
+            terms_used=element_pair.split(" * "),
+            warnings=[]
+        ), {
             "station": "Objectives", 
             "valley_summary": valley_summary,
             "products": [element_pair]
@@ -221,11 +230,11 @@ def compute_cell_F(i: int, j: int, J: Matrix, C: Matrix, resolver: CellResolver,
     
     # Trace Stage 2 (lensing)
     if tracer:
-        tracer.trace_stage("final", context_for_stage2, {
-            "text": final_meaning,
-            "terms_used": [resolved_concept],
-            "warnings": []
-        }, {
+        tracer.trace_stage("final", context_for_stage2, SimpleResult(
+            text=final_meaning,
+            terms_used=[resolved_concept],
+            warnings=[]
+        ), {
             "station": "Objectives", 
             "valley_summary": valley_summary,
             "stage_plan": ["element-wise", "lensing"]
@@ -291,11 +300,11 @@ def synthesize_cell_D(i: int, j: int, A: Matrix, F: Matrix, problem: str, resolv
             i=i,
             j=j
         )
-        tracer.trace_stage("synthesis", stage1_context, {
-            "text": synthesis_statement,
-            "terms_used": [a_cell.value, f_cell.value, problem],
-            "warnings": []
-        }, {
+        tracer.trace_stage("synthesis", stage1_context, SimpleResult(
+            text=synthesis_statement,
+            terms_used=[a_cell.value, f_cell.value, problem],
+            warnings=[]
+        ), {
             "station": "Objectives", 
             "valley_summary": valley_summary,
             "products": [synthesis_statement]
@@ -317,11 +326,11 @@ def synthesize_cell_D(i: int, j: int, A: Matrix, F: Matrix, problem: str, resolv
     
     # Trace Stage 2 (lensing)
     if tracer:
-        tracer.trace_stage("final", context_for_stage2, {
-            "text": final_meaning,
-            "terms_used": [synthesis_statement],
-            "warnings": []
-        }, {
+        tracer.trace_stage("final", context_for_stage2, SimpleResult(
+            text=final_meaning,
+            terms_used=[synthesis_statement],
+            warnings=[]
+        ), {
             "station": "Objectives", 
             "valley_summary": valley_summary,
             "stage_plan": ["synthesis", "lensing"]
