@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chirality-framework"
+version = "15.0.0"
+description = "CF14 Semantic Calculator - Fixed canonical algorithm for structured problem-solving"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Chirality Framework Team"}
+]
+maintainers = [
+    {name = "Chirality Framework Team"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
+]
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.0.0",
+    "python-dotenv>=1.0.0"
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.0.0"]
+neo4j = ["neo4j>=5.0.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "mypy>=1.0.0"
+]
+all = [
+    "openai>=1.0.0",
+    "neo4j>=5.0.0"
+]
+
+[project.scripts]
+chirality = "chirality.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/sgttomas/chirality-framework"
+Repository = "https://github.com/sgttomas/chirality-framework.git"
+Issues = "https://github.com/sgttomas/chirality-framework/issues"
+Documentation = "https://github.com/sgttomas/chirality-framework/blob/main/README.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["chirality*"]
+exclude = ["tests*", "docs*", "scripts*"]
+
+[tool.setuptools.package-data]
+chirality = ["normative_spec.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
