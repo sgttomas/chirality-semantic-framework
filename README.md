@@ -1,4 +1,4 @@
-# Chirality Framework: A Semantic Calculator (CF14)
+# Chirality Framework: A Semantic Calculator
 
 **Version: 15.0.0** | **Status: Refactored to Canonical Algorithm**
 
