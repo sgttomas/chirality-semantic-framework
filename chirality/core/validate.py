@@ -57,65 +57,74 @@ def ensure_same_rows_cols(A: Matrix, B: Matrix, op: str) -> None:
 
 def validate_cell(cell: Cell) -> List[str]:
     """
-    Validate a cell structure.
-    
-    Args:
-        cell: Cell to validate
-    
-    Returns:
-        List of validation errors (empty if valid)
+    Validate a cell structure for the simplified CF14 types.
+
+    Checks only fields that actually exist on Cell:
+    - row/col are non-negative integers
+    - value is a non-empty string
+    - provenance is a dict (may be empty)
     """
-    errors = []
-    
-    # Check required fields
-    if not cell.id:
-        errors.append("Cell missing ID")
-    
-    if cell.row < 0:
+    errors: List[str] = []
+
+    # row/col
+    if not isinstance(cell.row, int) or cell.row < 0:
         errors.append(f"Invalid row position: {cell.row}")
-    
-    if cell.col < 0:
+    if not isinstance(cell.col, int) or cell.col < 0:
         errors.append(f"Invalid column position: {cell.col}")
-    
-    if not cell.value:
-        errors.append("Cell missing value")
-    elif not isinstance(cell.value, str):
-        errors.append("Cell value must be string")
-    
-    # Note: Modality validation removed - simplified architecture
-    # Cells now only have row, col, value, provenance
-    
+
+    # value
+    if not isinstance(cell.value, str) or not cell.value.strip():
+        errors.append("Cell value must be a non-empty string")
+
+    # provenance
+    if not isinstance(cell.provenance, dict):
+        errors.append("Cell provenance must be a dict")
+
     return errors
 
 
 def validate_matrix(matrix: Matrix) -> List[str]:
     """
-    Validate a matrix structure.
-    
-    Args:
-        matrix: Matrix to validate
-    
-    Returns:
-        List of validation errors (empty if valid)
+    Validate a matrix structure for the simplified CF14 types.
+
+    Checks presence and coherence of:
+    - name (str), station (str)
+    - row_labels/col_labels length matches cells grid
+    - cells 2D list shape consistency
     """
-    errors = []
-    
-    # Check required fields
-    if not matrix.id:
-        errors.append("Matrix missing ID")
-    
-    # Note: MatrixType validation removed - simplified architecture
-    # Matrices identified by name (A, B, C, D, F, J)
-    
-    # Validate dimensions
+    errors: List[str] = []
+
+    # Basic identity
+    if not isinstance(matrix.name, str) or not matrix.name:
+        errors.append("Matrix missing name")
+    if not isinstance(matrix.station, str) or not matrix.station:
+        errors.append("Matrix missing station")
+
+    # Labels
+    if not isinstance(matrix.row_labels, list) or not all(isinstance(x, str) for x in matrix.row_labels):
+        errors.append("row_labels must be list[str]")
+    if not isinstance(matrix.col_labels, list) or not all(isinstance(x, str) for x in matrix.col_labels):
+        errors.append("col_labels must be list[str]")
+
     rows, cols = matrix.shape
     if rows <= 0 or cols <= 0:
         errors.append(f"Invalid dimensions: {matrix.shape}")
-    
-    # Validate cells
-    if not matrix.cells:
-        errors.append("Matrix has no cells")
-    
+
+    # Cells grid
+    if not isinstance(matrix.cells, list) or len(matrix.cells) != rows:
+        errors.append("cells must be a 2D list with len == number of rows")
+    else:
+        for r, row in enumerate(matrix.cells):
+            if not isinstance(row, list) or len(row) != cols:
+                errors.append(f"row {r} length mismatch: expected {cols}, got {len(row) if isinstance(row, list) else 'not a list'}")
+                break
+
+    # Label vs shape coherence
+    if isinstance(matrix.row_labels, list) and len(matrix.row_labels) != rows:
+        errors.append("row_labels length does not match number of rows")
+    if isinstance(matrix.col_labels, list) and len(matrix.col_labels) != cols:
+        errors.append("col_labels length does not match number of columns")
+
     cell_positions = set()
     for cell in matrix.cells:
         # Validate individual cell

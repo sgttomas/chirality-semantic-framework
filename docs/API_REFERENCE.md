@@ -166,13 +166,13 @@ from chirality import MATRIX_B
 ```
 
 ### MATRIX_J (Judgment - 3×4)
-```python  
+```python
 from chirality import MATRIX_J
 
-# Station: Objectives
-# Row labels: ["Normative", "Operative", "Evaluative"]
-# Col labels: ["Necessity (vs Contingency)", "Sufficiency", "Completeness", "Consistency"] 
-# Content: Required, Critical, Essential, etc.
+# Station: Verification
+# Row labels: ["Data", "Information", "Knowledge"]  # Truncated from B (no "Wisdom" row)
+# Col labels: ["Necessity (vs Contingency)", "Sufficiency", "Completeness", "Consistency"]
+# Content: Mirrors the first three rows of B (e.g., Necessary, Contingent, Fundamental, ...)
 ```
 
 **Matrix Relationships:**

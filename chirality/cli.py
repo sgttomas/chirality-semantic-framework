@@ -136,31 +136,93 @@ def compute_cell(matrix: str, row: int, col: int, verbose: bool,
         
         # Compute the requested cell based on matrix type
         if matrix.upper() == 'C':
-            if verbose: # Verbose mode is not implemented for this flow yet
-                cell = compute_cell_C(row, col, A, B, resolver_obj, valley_summary, tracer_obj, exporter_obj)
-                _show_cell_result(cell, A.row_labels[row], B.col_labels[col])
-            else:
-                cell = compute_cell_C(row, col, A, B, resolver_obj, valley_summary, tracer_obj, exporter_obj)
-                _show_cell_result(cell, A.row_labels[row], B.col_labels[col])
+            if verbose:
+                # Show explicit 3-stage breakdown for C using helper
+                _show_c_computation_verbose(row, col, A, B, resolver_obj, valley_summary, tracer_obj)
+            # Always compute final cell to show consolidated result and provenance
+            cell = compute_cell_C(row, col, A, B, resolver_obj, valley_summary, tracer_obj, exporter_obj)
+            _show_cell_result(cell, A.row_labels[row], B.col_labels[col])
                 
         elif matrix.upper() == 'F':
             C = compute_matrix_C(A, B, resolver_obj, valley_summary, tracer_obj, exporter_obj)
-            if verbose: # Verbose mode is not implemented for this flow yet
-                cell = compute_cell_F(row, col, J, C, resolver_obj, valley_summary, tracer_obj, exporter_obj)
-                _show_cell_result(cell, J.row_labels[row], J.col_labels[col])
-            else:
-                cell = compute_cell_F(row, col, J, C, resolver_obj, valley_summary, tracer_obj, exporter_obj)
-                _show_cell_result(cell, J.row_labels[row], J.col_labels[col])
+            if verbose:
+                # Minimal staged view for F: element-wise pair → resolve → lens
+                click.echo()
+                click.echo(click.style("STAGE 1: Element-wise (J ⊙ C)", **STAGE_STYLE))
+                click.echo(click.style("-" * 40, **DIM_STYLE))
+                j_cell = J.get_cell(row, col)
+                c_cell = C.get_cell(row, col)
+                pair = f"{j_cell.value} * {c_cell.value}"
+                click.echo(f"  Pair: {pair}")
+
+                ctx1 = SemanticContext(
+                    station_context="Objectives",
+                    valley_summary=valley_summary,
+                    row_label=J.row_labels[row],
+                    col_label=J.col_labels[col],
+                    operation_type="*",
+                    terms={"pair": pair},
+                    matrix="F",
+                    i=row,
+                    j=col,
+                )
+                resolved = resolver_obj.resolve_semantic_pair(pair, ctx1)
+                click.echo(click.style("STAGE 2: Semantic Resolution", **STAGE_STYLE))
+                click.echo(click.style("-" * 40, **DIM_STYLE))
+                click.echo(f"  {pair} → {click.style(resolved, fg='green')}")
+
+                click.echo()
+                click.echo(click.style("STAGE 3: Ontological Lensing", **STAGE_STYLE))
+                click.echo(click.style("-" * 40, **DIM_STYLE))
+                ctx2 = SemanticContext(
+                    station_context="Objectives",
+                    valley_summary=valley_summary,
+                    row_label=J.row_labels[row],
+                    col_label=J.col_labels[col],
+                    operation_type="interpret",
+                    terms={"content": resolved},
+                    matrix="F",
+                    i=row,
+                    j=col,
+                )
+                lensed = resolver_obj.apply_ontological_lens(resolved, ctx2)
+                click.echo(f"  {lensed}")
+
+            cell = compute_cell_F(row, col, J, C, resolver_obj, valley_summary, tracer_obj, exporter_obj)
+            _show_cell_result(cell, J.row_labels[row], J.col_labels[col])
                 
         elif matrix.upper() == 'D':
             C = compute_matrix_C(A, B, resolver_obj, valley_summary, tracer_obj, exporter_obj)
             F = compute_matrix_F(J, C, resolver_obj, valley_summary, tracer_obj, exporter_obj)
-            if verbose: # Verbose mode is not implemented for this flow yet
-                cell = synthesize_cell_D(row, col, A, F, problem, resolver_obj, valley_summary, tracer_obj, exporter_obj)
-                _show_cell_result(cell, A.row_labels[row], A.col_labels[col])
-            else:
-                cell = synthesize_cell_D(row, col, A, F, problem, resolver_obj, valley_summary, tracer_obj, exporter_obj)
-                _show_cell_result(cell, A.row_labels[row], A.col_labels[col])
+            if verbose:
+                # Minimal staged view for D: synthesis formula → lens
+                click.echo()
+                click.echo(click.style("STAGE 1: Synthesis (A + F)", **STAGE_STYLE))
+                click.echo(click.style("-" * 40, **DIM_STYLE))
+                a_cell = A.get_cell(row, col)
+                f_cell = F.get_cell(row, col)
+                synthesis = f"{a_cell.value} applied to frame the problem of {problem} and {f_cell.value} to resolve the problem"
+                click.echo(f"  {synthesis}")
+
+                click.echo()
+                click.echo(click.style("STAGE 2: Ontological Lensing", **STAGE_STYLE))
+                click.echo(click.style("-" * 40, **DIM_STYLE))
+                ctx = SemanticContext(
+                    station_context="Objectives",
+                    valley_summary=valley_summary,
+                    row_label=A.row_labels[row],
+                    col_label=A.col_labels[col],
+                    operation_type="interpret",
+                    terms={"content": synthesis, "problem": problem},
+                    matrix="D",
+                    i=row,
+                    j=col,
+                )
+                lensed = resolver_obj.apply_ontological_lens(synthesis, ctx)
+                click.echo(f"  {lensed}")
+
+            cell = synthesize_cell_D(row, col, A, F, problem, resolver_obj, valley_summary, tracer_obj, exporter_obj)
+            _show_cell_result(cell, A.row_labels[row], A.col_labels[col])
             
     except Exception as e:
         click.echo(click.style(f"Error: {e}", **ERROR_STYLE))
@@ -282,14 +344,37 @@ def info():
     click.echo("Algorithm: 3-stage semantic interpretation pipeline")
     click.echo()
     click.echo(click.style("Canonical Matrices:", **INFO_STYLE))
-    click.echo("  A: 3×4 (Axioms/Problem Statement)")
-    click.echo("  B: 4×4 (Bridge)")
-    click.echo("  J: 3×4 (Judgment)")
+    # Matrix A
+    click.echo("  A: 3×4 (Axioms / Problem Statement)")
+    click.echo(f"    Station: {MATRIX_A.station}")
+    click.echo(f"    Rows:   {', '.join(MATRIX_A.row_labels)}")
+    click.echo(f"    Columns:{' ' if MATRIX_A.col_labels else ''}{', '.join(MATRIX_A.col_labels)}")
+    # Matrix B
+    click.echo("  B: 4×4 (Bridge / Decision Basis)")
+    click.echo(f"    Station: {MATRIX_B.station}")
+    click.echo(f"    Rows:   {', '.join(MATRIX_B.row_labels)}")
+    click.echo(f"    Columns:{' ' if MATRIX_B.col_labels else ''}{', '.join(MATRIX_B.col_labels)}")
+    # Matrix J
+    click.echo("  J: 3×4 (Judgment / Verification)")
+    click.echo(f"    Station: {MATRIX_J.station}")
+    click.echo(f"    Rows:   {', '.join(MATRIX_J.row_labels)}")
+    click.echo(f"    Columns:{' ' if MATRIX_J.col_labels else ''}{', '.join(MATRIX_J.col_labels)}")
     click.echo()
     click.echo(click.style("Result Matrices:", **INFO_STYLE))
     click.echo("  C = A * B: Requirements (3×4)")
     click.echo("  F = J ⊙ C: Objectives (3×4)")
     click.echo("  D = synthesis(A, F): Solution Objectives (3×4)")
+    # Explicit axes for derived matrices (without computing them)
+    # F axes mirror J's rows × J's columns
+    click.echo("    F Axes:")
+    click.echo(f"      Station: Objectives")
+    click.echo(f"      Rows:   {', '.join(MATRIX_J.row_labels)}")
+    click.echo(f"      Columns:{' ' if MATRIX_J.col_labels else ''}{', '.join(MATRIX_J.col_labels)}")
+    # D axes mirror A's rows × A's columns (station is Objectives)
+    click.echo("    D Axes:")
+    click.echo(f"      Station: Objectives")
+    click.echo(f"      Rows:   {', '.join(MATRIX_A.row_labels)}")
+    click.echo(f"      Columns:{' ' if MATRIX_A.col_labels else ''}{', '.join(MATRIX_A.col_labels)}")
     click.echo()
     click.echo(click.style("3-Stage Pipeline:", **INFO_STYLE))
     click.echo("  Stage 1: Combinatorial (mechanical k-products)")

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chirality-framework"
-version = "15.0.0"
-description = "CF14 Semantic Calculator - Fixed canonical algorithm for structured problem-solving"
+version = "15.0.1"
+description = "Chirality Framework Semantic Calculator - Fixed canonical algorithm for structured problem-solving"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [

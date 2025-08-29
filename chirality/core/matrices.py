@@ -48,7 +48,7 @@ MATRIX_B = Matrix(
     name="B",
     station="Problem Statement",
     row_labels=["Data", "Information", "Knowledge", "Wisdom"],
-    col_labels=["Necessicity (vs Contingency)", "Sufficiency", "Completeness", "Consistency"],
+    col_labels=["Necessity (vs Contingency)", "Sufficiency", "Completeness", "Consistency"],
     cells=_create_matrix_cells([
         ["Necessary vs Contingent", "Sufficient", "Complete", "Consistent"],
         ["Relevant", "Actionable", "Contextual", "Congruent"],
